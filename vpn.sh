@@ -60,6 +60,8 @@ start() {
     print_current_ip_address
   else
     echo "VPN failed to connect!"
+    tail -20 "$LOG_PATH"
+    exit 1
   fi
 }
 
