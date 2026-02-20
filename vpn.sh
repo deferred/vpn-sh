@@ -19,8 +19,11 @@ fi
 set -o allexport; source "${HOME}/.openconnect/connection-info.env"; set +o allexport
 
 check_dependencies() {
-  for cmd in openconnect dig ping; do
-    command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd is required but not installed"; exit 1; }
+  for cmd in openconnect-sso openconnect dig ping; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "Error: $cmd is required but not installed"
+      exit 1
+    fi
   done
 }
 
