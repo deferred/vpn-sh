@@ -53,7 +53,30 @@ start() {
   fi
 
   echo "Connecting to ${HOST}"
-  openconnect-sso --server "${HOST}" --user "${USERNAME}" --authgroup "${AUTHGROUP}" -- --script="vpn-slice --no-ns-hosts --no-host-names --verbose $HOSTS_TO_ROUTE" --pid-file="$PID_FILE_PATH" --background > "$LOG_PATH" 2>&1
+
+  local auth
+  # --authenticate shell outputs HOST=, COOKIE=, FINGERPRINT= to stdout
+  auth=$(openconnect-sso --server "${HOST}" --user "${USERNAME}" --authgroup "${AUTHGROUP}" --authenticate shell --log-level ERROR 2>>"$LOG_PATH")
+
+  local cookie vpn_host fingerprint
+  cookie=$(echo "$auth"      | grep '^COOKIE='      | cut -d= -f2- | tr -d "'")
+  vpn_host=$(echo "$auth"    | grep '^HOST='        | cut -d= -f2- | tr -d "'")
+  fingerprint=$(echo "$auth" | grep '^FINGERPRINT=' | cut -d= -f2- | tr -d "'")
+
+  if [[ -z "$cookie" || -z "$vpn_host" || -z "$fingerprint" ]]; then
+    echo "VPN authentication failed!"
+    echo "auth output: $auth" >> "$LOG_PATH"
+    tail -20 "$LOG_PATH"
+    exit 1
+  fi
+
+  echo "$cookie" | openconnect \
+    --cookie-on-stdin \
+    --servercert "$fingerprint" \
+    --script "vpn-slice --no-ns-hosts --no-host-names --verbose $HOSTS_TO_ROUTE" \
+    --pid-file="$PID_FILE_PATH" \
+    --background \
+    "$vpn_host" >>"$LOG_PATH" 2>&1
 
   if is_vpn_running; then
     echo "VPN is connected"
