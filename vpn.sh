@@ -88,13 +88,33 @@ start() {
   fi
 }
 
+cleanup_routes() {
+  local vpn_ip
+  vpn_ip=$(dig +short "$HOST" | head -1)
+  if [[ -n "$vpn_ip" ]]; then
+    route delete -host "$vpn_ip" >/dev/null 2>&1 || true
+  fi
+
+  for subnet in $HOSTS_TO_ROUTE; do
+    route delete -net "$subnet" >/dev/null 2>&1 || true
+  done
+}
+
 stop() {
   if is_vpn_running; then
     local pid
     pid=$(cat "$PID_FILE_PATH")
-    kill -9 "$pid" >> "$LOG_PATH" 2>&1 || true
+    kill -TERM "$pid" 2>/dev/null || true
+    local waited=0
+    while kill -0 "$pid" 2>/dev/null && [[ $waited -lt 5 ]]; do
+      sleep 1
+      (( waited++ )) || true
+    done
+    kill -9 "$pid" 2>/dev/null || true
     rm -f "$PID_FILE_PATH" >/dev/null 2>&1
   fi
+
+  cleanup_routes
 
   echo "VPN is disconnected"
   print_current_ip_address
@@ -110,7 +130,7 @@ status() {
 }
 
 print_info() {
-  echo "Usage: $(basename "$0") (start|stop|restart|status)"
+  echo "Usage: $(basename "$0") (start|stop|restart|status|clean)"
 }
 
 is_network_available() {
@@ -135,5 +155,6 @@ case "$1" in
   stop) stop ;;
   status) status ;;
   restart) restart ;;
+  clean) cleanup_routes ;;
   *) print_info; exit 0 ;;
 esac
