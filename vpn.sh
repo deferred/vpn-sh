@@ -4,19 +4,21 @@ set -euo pipefail
 IFS=$'\n\t'
 
 if [[ $EUID -ne 0 ]]; then
-   echo "Please run as root"
-   exit 1
+  echo "Please run as root"
+  exit 1
 fi
 
 PID_FILE_PATH='/var/run/vpn.pid'
 LOG_PATH='/tmp/openconnect.log'
 
 if [[ ! -f "${HOME}/.openconnect/connection-info.env" ]]; then
-    echo "Error: Configuration file not found at ${HOME}/.openconnect/connection-info.env"
-    exit 1
+  echo "Error: Configuration file not found at ${HOME}/.openconnect/connection-info.env"
+  exit 1
 fi
 
-set -o allexport; source "${HOME}/.openconnect/connection-info.env"; set +o allexport
+set -o allexport
+source "${HOME}/.openconnect/connection-info.env"
+set +o allexport
 
 check_dependencies() {
   for cmd in openconnect-sso openconnect dig ping; do
@@ -59,13 +61,13 @@ start() {
   auth=$(openconnect-sso --server "${HOST}" --user "${USERNAME}" --authgroup "${AUTHGROUP}" --authenticate shell --log-level ERROR 2>>"$LOG_PATH")
 
   local cookie vpn_host fingerprint
-  cookie=$(echo "$auth"      | grep '^COOKIE='      | cut -d= -f2- | tr -d "'")
-  vpn_host=$(echo "$auth"    | grep '^HOST='        | cut -d= -f2- | tr -d "'")
+  cookie=$(echo "$auth" | grep '^COOKIE=' | cut -d= -f2- | tr -d "'")
+  vpn_host=$(echo "$auth" | grep '^HOST=' | cut -d= -f2- | tr -d "'")
   fingerprint=$(echo "$auth" | grep '^FINGERPRINT=' | cut -d= -f2- | tr -d "'")
 
   if [[ -z "$cookie" || -z "$vpn_host" || -z "$fingerprint" ]]; then
     echo "VPN authentication failed!"
-    echo "auth output: $auth" >> "$LOG_PATH"
+    echo "auth output: $auth" >>"$LOG_PATH"
     tail -20 "$LOG_PATH"
     exit 1
   fi
@@ -108,7 +110,7 @@ stop() {
     local waited=0
     while kill -0 "$pid" 2>/dev/null && [[ $waited -lt 5 ]]; do
       sleep 1
-      (( waited++ )) || true
+      ((waited++)) || true
     done
     kill -9 "$pid" 2>/dev/null || true
     rm -f "$PID_FILE_PATH" >/dev/null 2>&1
@@ -151,10 +153,13 @@ print_current_ip_address() {
 }
 
 case "$1" in
-  start) start ;;
-  stop) stop ;;
-  status) status ;;
-  restart) restart ;;
-  clean) cleanup_routes ;;
-  *) print_info; exit 0 ;;
+start) start ;;
+stop) stop ;;
+status) status ;;
+restart) restart ;;
+clean) cleanup_routes ;;
+*)
+  print_info
+  exit 0
+  ;;
 esac
