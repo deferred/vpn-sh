@@ -11,6 +11,8 @@ fi
 PID_FILE_PATH='/var/run/vpn-sh.pid'
 LOG_PATH='/var/log/vpn-sh.log'
 CONFIG_PATH="${XDG_CONFIG_HOME:-${HOME}/.config}/vpn-sh/config"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+AUTH_SCRIPT_PATH="${SCRIPT_DIR}/vpn-auth.py"
 
 if [[ ! -f "${CONFIG_PATH}" ]]; then
   echo "Error: Configuration file not found at ${CONFIG_PATH}"
@@ -21,12 +23,17 @@ fi
 source "${CONFIG_PATH}"
 
 check_dependencies() {
-  for cmd in openconnect-sso openconnect dig ping; do
+  for cmd in dig openconnect ping uv; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       echo "Error: $cmd is required but not installed"
       exit 1
     fi
   done
+
+  if [[ ! -f "$AUTH_SCRIPT_PATH" ]]; then
+    echo "Error: Install vpn-auth.py next to vpn.sh (or the installed vpn command)"
+    exit 1
+  fi
 }
 
 validate_environment() {
@@ -58,7 +65,14 @@ start() {
 
   local auth
   # --authenticate shell outputs HOST=, COOKIE=, FINGERPRINT= to stdout
-  auth=$(openconnect-sso --server "${HOST}" --user "${USERNAME}" --authgroup "${AUTHGROUP}" --authenticate shell --log-level ERROR 2>>"$LOG_PATH")
+  # use the login user's keyring for saved password and TOTP credentials
+  auth=$(sudo -H -u "${SUDO_USER:-root}" \
+    "$(command -v uv)" run --script "$AUTH_SCRIPT_PATH" \
+    --server "${HOST}" \
+    --user "${USERNAME}" \
+    --authgroup "${AUTHGROUP}" \
+    --authenticate shell \
+    --log-level ERROR 2>>"$LOG_PATH")
 
   local cookie vpn_host fingerprint
   cookie=$(echo "$auth" | grep '^COOKIE=' | cut -d= -f2- | tr -d "'")
