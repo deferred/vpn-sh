@@ -1,8 +1,11 @@
 # /// script
-# requires-python = "==3.12.*"
+# requires-python = ">=3.11"
 # dependencies = ["openconnect-sso==0.8.1", "pyotp==2.9.0", "setuptools>=40,<81"]
+# [tool.uv]
+# override-dependencies = ["lxml>=5,<6"]
 # ///
 
+import asyncio
 from typing import Any
 
 from PyQt6.QtWebEngineCore import QWebEngineScript
@@ -54,4 +57,10 @@ class PasswordBrowser(webengine_process.WebBrowser):
 webengine_process.WebBrowser = PasswordBrowser
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # openconnect-sso 0.8.1 expects an event loop before main starts
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        raise SystemExit(main())
+    finally:
+        loop.close()
