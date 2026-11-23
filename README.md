@@ -13,21 +13,14 @@ vpn.sh is a shell script to simplify OpenConnect VPN client experience.
 
 ## Usage
 
-```bash
-# shows available commands
-vpn
+Run `sudo vpn --help` to list the available commands.
 
-# starts vpn
-sudo vpn start
-
-# stops vpn
-sudo vpn stop
-
-# shows vpn status
-sudo vpn status
-
-# restarts vpn
-sudo vpn restart
-```
+| Command | Description |
+| --- | --- |
+| `sudo vpn start` | Connect to the VPN. |
+| `sudo vpn stop` | Disconnect from the VPN and remove its routes. |
+| `sudo vpn status` | Check whether the VPN is running. |
+| `sudo vpn restart` | Disconnect and reconnect to the VPN. |
+| `sudo vpn clean` | Remove VPN routes without stopping the VPN process. |
 
 Logs are available at `/var/log/vpn-sh.log`
