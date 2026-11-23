@@ -8,15 +8,17 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-PID_FILE_PATH='/var/run/vpn.pid'
-LOG_PATH='/tmp/openconnect.log'
+PID_FILE_PATH='/var/run/vpn-sh.pid'
+LOG_PATH='/var/log/vpn-sh.log'
+CONFIG_PATH="${HOME}/.config/vpn-sh/config"
 
-if [[ ! -f "${HOME}/.openconnect/connection-info.env" ]]; then
-  echo "Error: Configuration file not found at ${HOME}/.openconnect/connection-info.env"
+if [[ ! -f "${CONFIG_PATH}" ]]; then
+  echo "Error: Configuration file not found at ${CONFIG_PATH}"
   exit 1
 fi
 
-source "${HOME}/.openconnect/connection-info.env"
+# shellcheck source=config.example
+source "${CONFIG_PATH}"
 
 check_dependencies() {
   for cmd in openconnect-sso openconnect dig ping; do
