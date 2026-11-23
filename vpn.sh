@@ -16,9 +16,7 @@ if [[ ! -f "${HOME}/.openconnect/connection-info.env" ]]; then
   exit 1
 fi
 
-set -o allexport
 source "${HOME}/.openconnect/connection-info.env"
-set +o allexport
 
 check_dependencies() {
   for cmd in openconnect-sso openconnect dig ping; do
@@ -30,7 +28,7 @@ check_dependencies() {
 }
 
 validate_environment() {
-  local required_vars=("HOST" "USERNAME" "PASSWORD" "AUTHGROUP" "HOSTS_TO_ROUTE")
+  local required_vars=("HOST" "USERNAME" "AUTHGROUP" "HOSTS_TO_ROUTE")
 
   for var in "${required_vars[@]}"; do
     if [[ -z "${!var:-}" ]]; then
