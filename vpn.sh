@@ -10,7 +10,7 @@ fi
 
 PID_FILE_PATH='/var/run/vpn-sh.pid'
 LOG_PATH='/var/log/vpn-sh.log'
-CONFIG_PATH="${HOME}/.config/vpn-sh/config"
+CONFIG_PATH="${XDG_CONFIG_HOME:-${HOME}/.config}/vpn-sh/config"
 
 if [[ ! -f "${CONFIG_PATH}" ]]; then
   echo "Error: Configuration file not found at ${CONFIG_PATH}"
