@@ -1,4 +1,8 @@
 HOST=
 USERNAME=
+# use the exact login selection offered by the VPN server
+# run openconnect --authenticate "$HOST" after setting HOST, then copy one value from the GROUP prompt
 AUTHGROUP=
-HOSTS_TO_ROUTE=
+# use a quoted, space-separated list of exact hostnames and IPv4 CIDR networks to route through the VPN
+# for example: HOSTS_TO_ROUTE="intranet.example.com 10.20.0.0/16"
+HOSTS_TO_ROUTE=""
