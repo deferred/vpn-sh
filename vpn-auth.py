@@ -17,7 +17,7 @@ class PasswordBrowser(webengine_process.WebBrowser):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        # report unsupported passkeys before Microsoft chooses a sign-in method
+        # hide passkeys from Microsoft, so it falls back to password and TOTP
         script = QWebEngineScript()
         script.setName("vpn-password-totp")
         script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
@@ -32,22 +32,50 @@ class PasswordBrowser(webengine_process.WebBrowser):
         configurable: true,
         value: undefined
     });
+
+    // the auto-fill rule clicks "Next" on the passkey setup prompt,
+    // so press "Not now" first and hide "Next" from that rule
+    const clicked = new WeakSet();
+    const skipPasskeySetup = () => {
+        const skip = [...document.querySelectorAll("a, button, input[type=button], input[type=submit]")]
+            .find((el) => el.offsetParent !== null
+                && /^not now$/i.test((el.value || el.textContent || "").trim()));
+        if (!skip) {
+            return;
+        }
+        for (const el of document.querySelectorAll("[data-report-event=Signin_Submit]")) {
+            el.removeAttribute("data-report-event");
+        }
+        if (!clicked.has(skip)) {
+            clicked.add(skip);
+            skip.click();
+        }
+    };
+    new MutationObserver(skipPasskeySetup).observe(document, {
+        attributes: true,
+        childList: true,
+        subtree: true
+    });
+
     if (!navigator.credentials) {
         return;
     }
-    const originalGet = navigator.credentials.get.bind(navigator.credentials);
-    Object.defineProperty(navigator.credentials, "get", {
-        configurable: true,
-        value(options) {
-            if (options && options.publicKey) {
-                return Promise.reject(new DOMException(
-                    "Passkey sign-in is unavailable in this Qt browser.",
-                    "NotAllowedError"
-                ));
+    // reject passkey calls, because they never finish in this Qt browser
+    for (const method of ["create", "get"]) {
+        const original = navigator.credentials[method].bind(navigator.credentials);
+        Object.defineProperty(navigator.credentials, method, {
+            configurable: true,
+            value(options) {
+                if (options && options.publicKey) {
+                    return Promise.reject(new DOMException(
+                        "Passkeys are unavailable in this Qt browser.",
+                        "NotAllowedError"
+                    ));
+                }
+                return original(options);
             }
-            return originalGet(options);
-        }
-    });
+        });
+    }
 })();
 """)
         self.page().scripts().insert(script)
